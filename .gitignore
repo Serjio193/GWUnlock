@@ -1,0 +1,31 @@
+# Runtime data
+backups/
+logs/
+markers/
+*.log
+_MEI*/
+
+# Build output
+build/
+dist/
+__pycache__/
+*.pyc
+*.pyo
+*.spec.bak
+
+# Local release artifacts. Upload these to GitHub Releases instead of committing them.
+release/*.exe
+release/*.zip
+
+# Local IDE / OS files
+.idea/
+.vscode/
+Thumbs.db
+Desktop.ini
+
+# Device backup files
+*.bin.actual.sha1
+flash_backup_*.bin
+internal_flash_backup_*.bin
+itcm_backup_*.bin
+new_flash_image.bin
