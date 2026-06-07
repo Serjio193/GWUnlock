@@ -1,73 +1,81 @@
 # GWUnlock
 
+![GWUnlock](screenshots/GWUnlock.jpg)
+
 GWUnlock is a standalone Windows utility for Nintendo Game & Watch devices based on the STM32H7B0 microcontroller.
+
+The project provides a simple graphical interface for device identification, backup, restore, and research operations using an ST-Link programmer.
 
 ## Features
 
-- Device identification
-- SPI Flash backup and restore
-- Internal MCU Flash backup and restore
-- Device information display
-- ST-Link support
-- Portable single-file executable
-- Light and dark UI themes
-- English, Russian, and Ukrainian interface languages
+* Device identification
+* Protection status display
+* SPI Flash backup
+* SPI Flash restore
+* Internal MCU Flash backup
+* Internal MCU Flash restore
+* ST-Link support
+* Portable single-file executable
+* Light and dark UI themes
+* English, Russian, and Ukrainian interface languages
 
 ## Requirements
 
-- Windows 10 x64 or Windows 11 x64
-- ST-Link V2 or compatible programmer
-- ST-Link USB driver
+* Windows 10 x64
+* Windows 11 x64
+* ST-Link V2 or compatible programmer
+* Installed ST-Link USB driver
 
-Python, PySide6, OpenOCD, pyOCD, and gnwmanager are bundled in the portable release executable.
+No additional installation of Python, PySide6, OpenOCD, pyOCD, or gnwmanager is required. All required components are bundled into the release executable.
 
-## Usage Notes
+## Backup Files
 
-GWUnlock stores device backup files next to the executable in the `backups` folder.
+GWUnlock stores backup files in the `backups` folder located next to the executable.
 
-Keep this folder in a safe place. Restore requires the matching SPI backup, MCU backup, and ITCM backup from the same device.
+For a successful restore operation, keep the following files from the same device:
 
-The single-file executable may temporarily extract runtime files into a `_MEI...` folder while it is running. This is normal for PyInstaller one-file applications. Backup files are not stored there.
+* SPI Flash Backup
+* MCU Flash Backup
+* ITCM Backup
 
-## Build
+It is strongly recommended to store backups in a safe location.
 
-Install project dependencies in a local Python environment, then build with PyInstaller:
+## Building
+
+Install project dependencies and build using PyInstaller:
 
 ```powershell
 python -m PyInstaller --noconfirm GWUnlock.spec
 ```
 
-The resulting executable is created under `dist`.
+The generated executable will be placed in the `dist` directory.
 
-## Notes
+## Acknowledgements
 
-GWUnlock is intended for backup, restore, research, and educational purposes. Users are responsible for complying with all applicable laws and regulations in their jurisdiction.
+This project was inspired by the research and work of the Nintendo Game & Watch community, including:
 
-## Credits
+* https://github.com/ghidraninja/game-and-watch-backup
+* https://github.com/ghidraninja/game-and-watch-hacking
+* https://github.com/BrianPugh/gnwmanager
 
-This project was inspired by research and community work surrounding Nintendo Game & Watch devices, including:
-
-- ghidraninja/game-and-watch-backup
-- ghidraninja/game-and-watch-hacking
-- BrianPugh/gnwmanager
-- The Game & Watch modding community
-
-## Благодарности
-
-Проект вдохновлён исследованиями и работой:
-
-- ghidraninja/game-and-watch-backup
-- ghidraninja/game-and-watch-hacking
-- Сообществом модификации Nintendo Game & Watch
+Special thanks to all members of the Game & Watch modding community for their research, documentation, testing, and contributions.
 
 ## Third-Party Components
 
-- Python
-- PySide6 (Qt for Python)
-- OpenOCD
-- pyOCD
-- gnwmanager
+This project uses or bundles the following third-party components:
+
+* Python
+* PySide6 (Qt for Python)
+* OpenOCD
+* pyOCD
+* gnwmanager
+
+See `THIRD_PARTY_NOTICES.md` for additional information.
 
 ## Disclaimer
 
-This project is not affiliated with or endorsed by Nintendo, STMicroelectronics, or any other company mentioned above.
+This project is not affiliated with, endorsed by, or associated with Nintendo, STMicroelectronics, or any other company mentioned in this repository.
+
+GWUnlock is intended for backup, restore, research, preservation, and educational purposes only.
+
+Users are solely responsible for any actions performed with their devices. The author assumes no responsibility for data loss, device damage, or any consequences resulting from the use of this software.
