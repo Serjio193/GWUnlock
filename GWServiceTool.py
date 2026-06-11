@@ -32,7 +32,7 @@ from PySide6.QtWidgets import (
 
 
 FROZEN = bool(getattr(sys, "frozen", False))
-APP_VERSION = "1.0.2"
+APP_VERSION = "1.0.3"
 BUILD_DATE = "2026-06-11"
 GITHUB_LATEST_RELEASE_API = "https://api.github.com/repos/Serjio193/GWUnlock/releases/latest"
 GITHUB_RELEASES_URL = "https://github.com/Serjio193/GWUnlock/releases/latest"
@@ -427,7 +427,7 @@ LANGS = {
         "instr_1": "Checks local tools, detects the model, and reads protection status.",
         "instr_2": "Creates an SPI backup. Wait for the progress bar to reach 100%.",
         "instr_3_phase2": "Phase 2: power-cycle, hold Power, wait for the blue screen, confirm, and keep holding Power.",
-        "instr_3_phase1": "Phase 1: programs a 64 MiB payload image to SPI. This may take several minutes.",
+        "instr_3_phase1": "Phase 1: programs a payload image to SPI. This may take several minutes.",
         "instr_4": "Unlock erases internal flash. After OK, power-cycle and run Step 5 Restore.",
         "instr_5": "Restores SPI and internal flash from backup. Power-cycle after completion.",
         "success_4": "OK: device unlocked. Power-cycle it, then run Step 5 Restore.",
@@ -586,7 +586,7 @@ class MainWindow(QMainWindow):
         self.step3_estimated_stage = ""
         self.last_progress_size = -1
         self.last_log_size = 0
-        self.spi_expected_size = 67_108_864
+        self.spi_expected_size = 0
         self.buttons: dict[str, QPushButton] = {}
         self.step_raw_lines: list[str] = []
         self.lang = detect_default_language()
@@ -1001,6 +1001,9 @@ exit /b 1
             "Protection:",
             "Detected model:",
             "Detecting",
+            "Reading SPI flash size",
+            "SPI flash size",
+            "Using SPI flash size",
             "Running sanity checks",
             "Looks good",
             "Step 1 did not complete successfully",
@@ -1229,6 +1232,11 @@ exit /b 1
                 ("Protection status is UNKNOWN.", "Статус защиты UNKNOWN."),
                 ("Protection check failed:", "Проверка защиты не удалась:"),
                 ("Check ST-Link connection, SWD wiring, and device power.", "Проверь подключение ST-Link, SWD-провода и питание устройства."),
+                ("Reading SPI flash size...", "Чтение размера SPI flash..."),
+                ("SPI flash size is missing.", "Размер SPI flash отсутствует."),
+                ("SPI flash size is UNKNOWN.", "Размер SPI flash UNKNOWN."),
+                ("SPI flash size:", "Размер SPI flash:"),
+                ("Using SPI flash size from Step 1:", "Используется размер SPI flash из шага 1:"),
                 ("Dumping internal flash...", "Чтение внутренней памяти MCU..."),
                 ("Verifying internal flash backup...", "Проверка резервной копии MCU..."),
                 ("Validating internal flash backup before unlock...", "Проверка резервной копии MCU перед разблокировкой..."),
@@ -1297,6 +1305,11 @@ exit /b 1
                 ("Protection status is UNKNOWN.", "Стан захисту UNKNOWN."),
                 ("Protection check failed:", "Перевірка захисту не вдалася:"),
                 ("Check ST-Link connection, SWD wiring, and device power.", "Перевір підключення ST-Link, SWD-дроти та живлення пристрою."),
+                ("Reading SPI flash size...", "Читання розміру SPI flash..."),
+                ("SPI flash size is missing.", "Розмір SPI flash відсутній."),
+                ("SPI flash size is UNKNOWN.", "Розмір SPI flash UNKNOWN."),
+                ("SPI flash size:", "Розмір SPI flash:"),
+                ("Using SPI flash size from Step 1:", "Використовується розмір SPI flash з кроку 1:"),
                 ("Dumping internal flash...", "Читання внутрішньої пам'яті MCU..."),
                 ("Verifying internal flash backup...", "Перевірка резервної копії MCU..."),
                 ("Validating internal flash backup before unlock...", "Перевірка резервної копії MCU перед розблокуванням..."),
@@ -1373,9 +1386,9 @@ exit /b 1
                 "ru": "Подготовка payload для чтения MCU.",
                 "uk": "Підготовка payload для читання MCU.",
             },
-            "Programming 64 MiB payload image to SPI flash. This can take several minutes.": {
-                "ru": "Запись payload 64 МиБ во SPI. Это займёт несколько минут.",
-                "uk": "Запис payload 64 МіБ у SPI. Це займе кілька хвилин.",
+            "Programming payload image to SPI flash. This can take several minutes.": {
+                "ru": "Запись payload во SPI. Это займёт несколько минут.",
+                "uk": "Запис payload у SPI. Це займе кілька хвилин.",
             },
             "Payload mode confirmed. Reading internal flash from SRAM mirror.": {
                 "ru": "Синий экран подтверждён. Чтение MCU из SRAM.",
@@ -1542,7 +1555,7 @@ exit /b 1
         self.phase_start = self.progress_start
         self.step3_estimated_stage = ""
         if script_name == "2_backup_flash.cmd":
-            self.spi_expected_size = 67_108_864
+            self.spi_expected_size = self.spi_size_for_target(self.current_target())
         self.last_progress_size = -1
         active_log = self.active_log_path(script_name)
         self.last_log_size = active_log.stat().st_size if active_log and active_log.exists() else 0
@@ -1594,7 +1607,7 @@ exit /b 1
 
         backup_name = f"flash_backup_{self.target.currentText()}.bin"
         backup_path = BACKUPS / backup_name
-        expected_size = max(1, self.spi_expected_size)
+        expected_size = max(1, self.spi_expected_size or self.spi_size_for_target(self.current_target()))
 
         if backup_path.exists():
             size = backup_path.stat().st_size
@@ -1909,6 +1922,9 @@ exit /b 1
     def current_state(self) -> dict[str, bool]:
         target = self.current_target()
         spi_path = self.backup_path(f"flash_backup_{target}.bin")
+        expected_spi_size = self.spi_size_for_target(target)
+        if expected_spi_size:
+            self.spi_expected_size = expected_spi_size
         internal_path = self.backup_path(f"internal_flash_backup_{target}.bin")
         internal_custom_sha1 = self.backup_path(f"internal_flash_backup_{target}.bin.actual.sha1")
         stable_internal = (
@@ -1923,7 +1939,12 @@ exit /b 1
         ) or stable_internal
         return {
             "sanity": self.marker_path(f"sanity_{target}.ok").exists(),
-            "spi_backup": spi_path.exists() and spi_path.stat().st_size == 67_108_864,
+            "spi_size_known": expected_spi_size > 0,
+            "spi_backup": (
+                spi_path.exists()
+                and expected_spi_size > 0
+                and spi_path.stat().st_size == expected_spi_size
+            ),
             "payload_pending": (
                 self.marker_path(f"payload_pending_{target}.ok").exists()
                 and not internal_backup
@@ -1934,6 +1955,13 @@ exit /b 1
             "restore": self.marker_path(f"restore_{target}.ok").exists(),
             "internal_exists": internal_path.exists(),
         }
+
+    def spi_size_for_target(self, target: str) -> int:
+        try:
+            value = self.marker_path(f"spi_size_{target}.ok").read_text(encoding="utf-8").strip()
+            return max(0, int(value))
+        except (OSError, ValueError):
+            return 0
 
     def verify_sha1_file(self, sha1_path: Path) -> bool:
         try:
@@ -1969,7 +1997,9 @@ exit /b 1
             return True
         if state["protection_unlocked"]:
             return script_name == "5_restore.cmd" and state["spi_backup"] and state["internal_backup"]
-        if script_name in ("2_backup_flash.cmd", "3_backup_internal_flash.cmd", "4_unlock_device.cmd") and not state["sanity"]:
+        if script_name in ("2_backup_flash.cmd", "3_backup_internal_flash.cmd", "4_unlock_device.cmd") and (
+            not state["sanity"] or not state["spi_size_known"]
+        ):
             return False
         if script_name == "4_unlock_device.cmd":
             return state["spi_backup"] and state["internal_backup"]
@@ -1980,7 +2010,9 @@ exit /b 1
     def disabled_reason(self, script_name: str, state: dict[str, bool]) -> str:
         if state["protection_unlocked"]:
             return self.tr("disabled_unlocked")
-        if script_name in ("2_backup_flash.cmd", "3_backup_internal_flash.cmd", "4_unlock_device.cmd") and not state["sanity"]:
+        if script_name in ("2_backup_flash.cmd", "3_backup_internal_flash.cmd", "4_unlock_device.cmd") and (
+            not state["sanity"] or not state["spi_size_known"]
+        ):
             return self.tr("need_sanity")
         if script_name == "4_unlock_device.cmd":
             return self.tr("need_internal_backup")

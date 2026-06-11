@@ -26,6 +26,17 @@ if not exist "%MARKERS%\sanity_%TARGET%.ok" (
   popd
   exit /b 1
 )
+if not exist "%MARKERS%\spi_size_%TARGET%.ok" (
+  echo SPI flash size is missing. Run Step 1 first.
+  popd
+  exit /b 1
+)
+set /p SPI_EXPECTED_SIZE=<"%MARKERS%\spi_size_%TARGET%.ok"
+if not defined SPI_EXPECTED_SIZE (
+  echo SPI flash size is missing. Run Step 1 first.
+  popd
+  exit /b 1
+)
 if "%LARGE_FLASH%"=="1" goto :skip_standard_overwrite_check
 if exist "%BACKUPS%\flash_backup_%TARGET%.bin" (
   echo Already have %BACKUPS%\flash_backup_%TARGET%.bin, refusing to overwrite.
@@ -86,7 +97,7 @@ exit /b 0
 :large_flash_dump
 if exist "%BACKUPS%\flash_backup_%TARGET%.bin" (
   for %%F in ("%BACKUPS%\flash_backup_%TARGET%.bin") do set "EXISTING_SIZE=%%~zF"
-  if not "!EXISTING_SIZE!"=="67108864" (
+  if not "!EXISTING_SIZE!"=="%SPI_EXPECTED_SIZE%" (
     set "PARTIAL_NAME=flash_backup_%TARGET%.bin.partial_%DATE:/=-%_%TIME::=-%"
     set "PARTIAL_NAME=!PARTIAL_NAME: =_!"
     set "PARTIAL_NAME=!PARTIAL_NAME:,=!"
@@ -135,9 +146,9 @@ if errorlevel 1 (
 )
 
 :read_large_spi
-echo Detecting SPI flash size through GNWManager helper.
+echo Using SPI flash size from Step 1: %SPI_EXPECTED_SIZE% bytes.
 echo Dumping SPI flash through GNWManager helper.
-%PY_EXE% -u "%TOOL_ROOT%\tools\gnw_spi_progress.py" --frequency %GNW_FREQUENCY% read-ext --chunk 2097152 --output "%BACKUPS%\flash_backup_%TARGET%.bin"
+%PY_EXE% -u "%TOOL_ROOT%\tools\gnw_spi_progress.py" --frequency %GNW_FREQUENCY% read-ext --chunk 2097152 --size %SPI_EXPECTED_SIZE% --output "%BACKUPS%\flash_backup_%TARGET%.bin"
 if errorlevel 1 (
   echo GNWManager SPI read failed.
   goto :large_flash_failed

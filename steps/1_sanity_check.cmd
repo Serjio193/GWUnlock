@@ -108,6 +108,36 @@ if not exist "payload\payload.bin" (
   exit /b 1
 )
 
+echo Reading SPI flash size...
+%PY_EXE% -u "%TOOL_ROOT%\tools\gnw_spi_progress.py" --frequency %GNW_FREQUENCY% info-ext > "logs\1_spi_size_current.log" 2>&1
+set "SPI_SIZE_RC=!ERRORLEVEL!"
+type "logs\1_spi_size_current.log"
+if not "!SPI_SIZE_RC!"=="0" (
+  if exist "%MARKERS%\spi_size_%TARGET%.ok" (
+    set /p DETECTED_SPI_SIZE=<"%MARKERS%\spi_size_%TARGET%.ok"
+    echo SPI flash size: !DETECTED_SPI_SIZE! bytes ^(from previous Step 1^)
+    goto :spi_size_done
+  )
+  echo SPI flash size is UNKNOWN. Check ST-Link connection, SWD wiring, and device power.
+  popd
+  exit /b 1
+)
+set "DETECTED_SPI_SIZE="
+for /f "tokens=2" %%S in ('findstr /B /C:"GNW_FLASH_SIZE " "logs\1_spi_size_current.log"') do set "DETECTED_SPI_SIZE=%%S"
+if not defined DETECTED_SPI_SIZE (
+  if exist "%MARKERS%\spi_size_%TARGET%.ok" (
+    set /p DETECTED_SPI_SIZE=<"%MARKERS%\spi_size_%TARGET%.ok"
+    echo SPI flash size: !DETECTED_SPI_SIZE! bytes ^(from previous Step 1^)
+    goto :spi_size_done
+  )
+  echo SPI flash size is UNKNOWN. Check ST-Link connection, SWD wiring, and device power.
+  popd
+  exit /b 1
+)
+echo !DETECTED_SPI_SIZE!>"%MARKERS%\spi_size_%TARGET%.ok"
+echo SPI flash size: !DETECTED_SPI_SIZE! bytes
+:spi_size_done
+
 echo Looks good.
 break > "%MARKERS%\sanity_%TARGET%.ok"
 popd

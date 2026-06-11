@@ -23,6 +23,7 @@ if /i "%ADAPTER%"=="auto" (
   for /f "usebackq delims=" %%A in (`powershell -NoProfile -Command "$d=Get-PnpDevice -PresentOnly -ErrorAction SilentlyContinue | Where-Object { $_.InstanceId -match 'VID_0483|VID_1366|VID_0D28' -or $_.FriendlyName -match 'ST-Link|STLink|J-Link|CMSIS' } | Select-Object -First 1; if ($d.InstanceId -match 'VID_1366' -or $d.FriendlyName -match 'J-Link') { 'jlink' } elseif ($d.InstanceId -match 'VID_0D28' -or $d.FriendlyName -match 'CMSIS') { 'cmsis-dap' } else { 'stlink' }"`) do set "ADAPTER=%%A"
 )
 if not defined OPENOCD_ADAPTER_SPEED set "OPENOCD_ADAPTER_SPEED=8000"
+if not defined LARGE_FLASH set "LARGE_FLASH=1"
 set /a GNW_FREQUENCY=%OPENOCD_ADAPTER_SPEED% * 1000
 
 if /i "%TARGET%"=="mario" (

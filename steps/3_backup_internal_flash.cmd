@@ -16,9 +16,20 @@ if not exist "%BACKUPS%\flash_backup_%TARGET%.bin" (
   popd
   exit /b 1
 )
+if not exist "%MARKERS%\spi_size_%TARGET%.ok" (
+  echo SPI flash size is missing. Run Step 1 first.
+  popd
+  exit /b 1
+)
+set /p SPI_EXPECTED_SIZE=<"%MARKERS%\spi_size_%TARGET%.ok"
+if not defined SPI_EXPECTED_SIZE (
+  echo SPI flash size is missing. Run Step 1 first.
+  popd
+  exit /b 1
+)
 for %%F in ("%BACKUPS%\flash_backup_%TARGET%.bin") do set "SPI_SIZE=%%~zF"
-if not "%SPI_SIZE%"=="67108864" (
-  echo SPI backup has unexpected size: %SPI_SIZE% bytes. Expected 67108864 bytes.
+if not "%SPI_SIZE%"=="%SPI_EXPECTED_SIZE%" (
+  echo SPI backup has unexpected size: %SPI_SIZE% bytes. Expected %SPI_EXPECTED_SIZE% bytes from Step 1.
   popd
   exit /b 1
 )
@@ -107,8 +118,8 @@ if errorlevel 1 (
 )
 
 echo [stage] payload_write Programming payload to SPI flash...
-echo [phase] Programming 64 MiB payload image to SPI flash. This can take several minutes.
-%PY_EXE% -u "%TOOL_ROOT%\tools\gnw_spi_progress.py" --frequency %GNW_FREQUENCY% write-ext --input "new_flash_image.bin"
+echo [phase] Programming payload image to SPI flash. This can take several minutes.
+%PY_EXE% -u "%TOOL_ROOT%\tools\gnw_spi_progress.py" --frequency %GNW_FREQUENCY% write-ext --expected-size %SPI_EXPECTED_SIZE% --input "new_flash_image.bin"
 if errorlevel 1 (
   del /q "new_flash_image.bin" >nul 2>&1
   del /q "%MARKERS%\payload_pending_%TARGET%.ok" >nul 2>&1

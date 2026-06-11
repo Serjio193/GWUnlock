@@ -1,5 +1,20 @@
 # Release Notes
 
+## v1.0.3
+
+Dynamic SPI flash size handling.
+
+- Read SPI flash size during Step 1 and store it next to runtime state.
+- Use the detected size for SPI backup, payload programming, and restore.
+- Validate SPI backup size against the detected device size instead of a fixed 64 MiB value.
+- Block Step 2/3/4 until Step 1 has successfully detected protection and SPI size.
+
+SHA256:
+
+```text
+3697A5FA31237BB1070449CD34138F36D1DAB31A13078EFB987F38EAF3E109F0  GWUnlock.exe
+```
+
 ## v1.0.2
 
 Update checker.

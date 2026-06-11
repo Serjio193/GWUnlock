@@ -45,6 +45,11 @@ def read_ext(args: argparse.Namespace) -> None:
     print(f"GNW_READ_DONE {time.perf_counter() - started:.3f}", flush=True)
 
 
+def info_ext(args: argparse.Namespace) -> None:
+    gnw = open_gnw(args.frequency)
+    print(f"GNW_FLASH_SIZE {int(gnw.external_flash_size)}", flush=True)
+
+
 def verify_ext(gnw: GnW, offset: int, chunks: list[bytes], chunk_size: int, started: float) -> None:
     total_bytes = sum(len(chunk) for chunk in chunks)
     done = 0
@@ -64,9 +69,15 @@ def verify_ext(gnw: GnW, offset: int, chunks: list[bytes], chunk_size: int, star
 
 def write_ext(args: argparse.Namespace) -> None:
     gnw = open_gnw(args.frequency)
+    actual_flash_size = int(gnw.external_flash_size)
+    print(f"GNW_FLASH_SIZE {actual_flash_size}", flush=True)
+    if args.expected_size and actual_flash_size != args.expected_size:
+        raise ValueError(
+            f"external flash size mismatch: expected {args.expected_size}, actual {actual_flash_size}"
+        )
     source = Path(args.input)
     data = pad_bytes(source.read_bytes(), int(gnw.external_flash_block_size))
-    if len(data) > int(gnw.external_flash_size):
+    if len(data) > actual_flash_size:
         raise ValueError("input does not fit into external flash")
 
     started = time.perf_counter()
@@ -109,6 +120,9 @@ def main() -> int:
     parser.add_argument("--frequency", type=int, default=8_000_000)
     sub = parser.add_subparsers(dest="command", required=True)
 
+    info = sub.add_parser("info-ext")
+    info.set_defaults(func=info_ext)
+
     read = sub.add_parser("read-ext")
     read.add_argument("--output", required=True)
     read.add_argument("--size", type=int, default=0)
@@ -118,6 +132,7 @@ def main() -> int:
     write = sub.add_parser("write-ext")
     write.add_argument("--input", required=True)
     write.add_argument("--offset", type=int, default=0)
+    write.add_argument("--expected-size", type=int, default=0)
     write.set_defaults(func=write_ext)
 
     args = parser.parse_args()

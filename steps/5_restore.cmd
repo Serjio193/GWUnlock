@@ -26,8 +26,24 @@ if not exist "%BACKUPS%\flash_backup_%TARGET%.bin" (
   popd
   exit /b 1
 )
+if not exist "%MARKERS%\spi_size_%TARGET%.ok" (
+  echo SPI flash size is missing. Run Step 1 first.
+  popd
+  exit /b 1
+)
+set /p SPI_EXPECTED_SIZE=<"%MARKERS%\spi_size_%TARGET%.ok"
+if not defined SPI_EXPECTED_SIZE (
+  echo SPI flash size is missing. Run Step 1 first.
+  popd
+  exit /b 1
+)
 for %%F in ("%BACKUPS%\flash_backup_%TARGET%.bin") do set "SPI_SIZE=%%~zF"
 for %%F in ("%BACKUPS%\internal_flash_backup_%TARGET%.bin") do set "MCU_SIZE=%%~zF"
+if not "%SPI_SIZE%"=="%SPI_EXPECTED_SIZE%" (
+  echo SPI backup has unexpected size: %SPI_SIZE% bytes. Expected %SPI_EXPECTED_SIZE% bytes from Step 1.
+  popd
+  exit /b 1
+)
 echo Restore source SPI: %BACKUPS%\flash_backup_%TARGET%.bin (%SPI_SIZE% bytes)
 echo Restore source MCU: %BACKUPS%\internal_flash_backup_%TARGET%.bin (%MCU_SIZE% bytes)
 echo Restore config adapter=%ADAPTER% target=%TARGET% speed_khz=%OPENOCD_ADAPTER_SPEED% gnw_frequency=%GNW_FREQUENCY%
@@ -61,7 +77,7 @@ if errorlevel 1 (
 
 echo [phase] Restoring and verifying SPI flash.
 echo Restoring SPI flash through GNWManager helper...
-%PY_EXE% -u "%TOOL_ROOT%\tools\gnw_spi_progress.py" --frequency %GNW_FREQUENCY% write-ext --input "%BACKUPS%\flash_backup_%TARGET%.bin"
+%PY_EXE% -u "%TOOL_ROOT%\tools\gnw_spi_progress.py" --frequency %GNW_FREQUENCY% write-ext --expected-size %SPI_EXPECTED_SIZE% --input "%BACKUPS%\flash_backup_%TARGET%.bin"
 if errorlevel 1 (
   echo Restoring SPI flash failed.
   popd
