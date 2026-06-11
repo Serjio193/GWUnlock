@@ -20,6 +20,12 @@ if not errorlevel 1 (
   popd
   exit /b 1
 )
+if not exist "%MARKERS%\sanity_%TARGET%.ok" (
+  echo Step 1 did not complete successfully.
+  echo Check ST-Link connection, SWD wiring, and device power, then run Step 1 again.
+  popd
+  exit /b 1
+)
 if "%LARGE_FLASH%"=="1" goto :skip_standard_overwrite_check
 if exist "%BACKUPS%\flash_backup_%TARGET%.bin" (
   echo Already have %BACKUPS%\flash_backup_%TARGET%.bin, refusing to overwrite.
@@ -129,13 +135,14 @@ if errorlevel 1 (
 )
 
 :read_large_spi
-echo Dumping 64 MiB SPI flash through GNWManager helper.
-%PY_EXE% -u "%TOOL_ROOT%\tools\gnw_spi_progress.py" --frequency %GNW_FREQUENCY% read-ext --chunk 2097152 --size 67108864 --output "%BACKUPS%\flash_backup_%TARGET%.bin"
+echo Detecting SPI flash size through GNWManager helper.
+echo Dumping SPI flash through GNWManager helper.
+%PY_EXE% -u "%TOOL_ROOT%\tools\gnw_spi_progress.py" --frequency %GNW_FREQUENCY% read-ext --chunk 2097152 --output "%BACKUPS%\flash_backup_%TARGET%.bin"
 if errorlevel 1 (
   echo GNWManager SPI read failed.
   goto :large_flash_failed
 )
-echo Successfully backed up 64 MiB SPI flash to %BACKUPS%\flash_backup_%TARGET%.bin.
+echo Successfully backed up SPI flash to %BACKUPS%\flash_backup_%TARGET%.bin.
 echo IMPORTANT: keep the backups folder safe. Restore needs SPI, MCU, and ITCM backups from this device.
 break > "%MARKERS%\spi_backup_%TARGET%.ok"
 popd

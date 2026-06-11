@@ -27,6 +27,7 @@ def emit(kind: str, progress: int, done: int, total: int, started: float) -> Non
 def read_ext(args: argparse.Namespace) -> None:
     gnw = open_gnw(args.frequency)
     total = args.size or int(gnw.external_flash_size)
+    print(f"GNW_FLASH_SIZE {total}", flush=True)
     chunk = max(4096, args.chunk)
     out = Path(args.output)
     out.parent.mkdir(parents=True, exist_ok=True)

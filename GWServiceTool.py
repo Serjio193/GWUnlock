@@ -29,8 +29,8 @@ from PySide6.QtWidgets import (
 
 
 FROZEN = bool(getattr(sys, "frozen", False))
-APP_VERSION = "1.0.0"
-BUILD_DATE = "2026-06-07"
+APP_VERSION = "1.0.1"
+BUILD_DATE = "2026-06-11"
 APP_ROOT = Path(sys.executable).resolve().parent if FROZEN else Path(__file__).resolve().parent
 ASSET_ROOT = Path(getattr(sys, "_MEIPASS", APP_ROOT)).resolve()
 APP_ICON = ASSET_ROOT / "resources" / "logo.ico"
@@ -191,6 +191,7 @@ LANGS = {
         "restore_not_done": "Восстановление: не выполнено",
         "disabled_unlocked": "Данная консоль уже разблокирована. Доступно только восстановление при наличии резервных копий.",
         "disabled_generic": "Этот шаг отключён текущим состоянием.",
+        "need_sanity": "Сначала выполни шаг 1. Если защита UNKNOWN, проверь питание, SWD-провода и подключение ST-Link.",
         "already_1": "Проверка уже отмечена OK. Запустить снова?",
         "already_2": "Полный SPI backup уже есть. Запустить снова?",
         "already_3": "Валидный internal backup уже есть. Запустить снова?",
@@ -221,6 +222,7 @@ LANGS = {
         "spi_write": "Запись SPI",
         "spi_verify": "Проверка SPI",
         "waiting_data": "ожидание данных",
+        "spi_size": "Определён размер SPI",
         "step_active": "Шаг активен",
         "log": "лог",
         "estimated": "оценка",
@@ -282,6 +284,7 @@ LANGS = {
         "restore_not_done": "Відновлення: не виконано",
         "disabled_unlocked": "Цю консоль вже розблоковано. Доступне тільки відновлення за наявності резервних копій.",
         "disabled_generic": "Цей крок вимкнено поточним станом.",
+        "need_sanity": "Спочатку виконай крок 1. Якщо захист UNKNOWN, перевір живлення, SWD-дроти та підключення ST-Link.",
         "already_1": "Перевірку вже позначено OK. Запустити знову?",
         "already_2": "Повний SPI backup вже є. Запустити знову?",
         "already_3": "Валідний internal backup вже є. Запустити знову?",
@@ -312,6 +315,7 @@ LANGS = {
         "spi_write": "Запис SPI",
         "spi_verify": "Перевірка SPI",
         "waiting_data": "очікування даних",
+        "spi_size": "Визначено розмір SPI",
         "step_active": "Крок активний",
         "log": "лог",
         "estimated": "оцінка",
@@ -373,6 +377,7 @@ LANGS = {
         "restore_not_done": "Restore: not completed",
         "disabled_unlocked": "The device is already unlocked. Run Step 5 Restore; other steps are disabled.",
         "disabled_generic": "This step is disabled by the current state.",
+        "need_sanity": "Run Step 1 first. If protection is UNKNOWN, check power, SWD wiring, and ST-Link connection.",
         "already_1": "The check is already marked OK. Run it again?",
         "already_2": "A complete SPI backup already exists. Run it again?",
         "already_3": "A valid internal backup already exists. Run it again?",
@@ -403,6 +408,7 @@ LANGS = {
         "spi_write": "Writing SPI",
         "spi_verify": "Verifying SPI",
         "waiting_data": "waiting for data",
+        "spi_size": "Detected SPI size",
         "step_active": "Step active",
         "log": "log",
         "estimated": "estimated",
@@ -466,6 +472,7 @@ class MainWindow(QMainWindow):
         self.step3_estimated_stage = ""
         self.last_progress_size = -1
         self.last_log_size = 0
+        self.spi_expected_size = 67_108_864
         self.buttons: dict[str, QPushButton] = {}
         self.step_raw_lines: list[str] = []
         self.lang = detect_default_language()
@@ -714,6 +721,15 @@ class MainWindow(QMainWindow):
             self.protection_status = "locked"
         elif text == "Protection: UNKNOWN":
             self.protection_status = "unknown"
+        if text.startswith("GNW_FLASH_SIZE "):
+            try:
+                self.spi_expected_size = max(1, int(text.split()[1]))
+            except (IndexError, ValueError):
+                return
+            mib = self.spi_expected_size / (1024 * 1024)
+            self.progress.setText(f"{self.tr('spi_size')}: {mib:.1f} MiB")
+            self.output.append(f"{self.tr('spi_size')}: {mib:.1f} MiB")
+            return
         if text.startswith("GNW_READ_PROGRESS ") or text.startswith("GNW_WRITE_PROGRESS ") or text.startswith("GNW_VERIFY_PROGRESS "):
             self.handle_gnw_progress(text)
             return
@@ -757,8 +773,11 @@ class MainWindow(QMainWindow):
         important = (
             "Protection:",
             "Detected model:",
+            "Detecting",
             "Running sanity checks",
             "Looks good",
+            "Step 1 did not complete successfully",
+            "Check ST-Link connection",
             "Already have",
             "Attempting",
             "Dumping",
@@ -838,6 +857,10 @@ class MainWindow(QMainWindow):
             "Protection: UNKNOWN": {
                 "ru": "Защита: UNKNOWN",
                 "uk": "Захист: UNKNOWN",
+            },
+            "Step 1 did not complete successfully.": {
+                "ru": "Шаг 1 не завершён успешно.",
+                "uk": "Крок 1 не завершено успішно.",
             },
             "Restore completed. Power-cycle the device.": {
                 "ru": "Восстановление завершено. Передёрни питание устройства.",
@@ -973,8 +996,12 @@ class MainWindow(QMainWindow):
                 ("Missing payload", "Отсутствует служебный образ"),
                 ("ERROR:", "ОШИБКА:"),
                 ("Attempting to dump SPI flash", "Начало чтения SPI flash"),
-                ("Dumping 64 MiB SPI flash", "Чтение 64 МиБ SPI flash"),
-                ("Successfully backed up 64 MiB SPI flash", "Резервная копия 64 МиБ SPI flash создана"),
+                ("Detecting SPI flash size", "Определение размера SPI flash"),
+                ("Dumping SPI flash", "Чтение SPI flash"),
+                ("Successfully backed up SPI flash", "Резервная копия SPI flash создана"),
+                ("Protection status is UNKNOWN.", "Статус защиты UNKNOWN."),
+                ("Protection check failed:", "Проверка защиты не удалась:"),
+                ("Check ST-Link connection, SWD wiring, and device power.", "Проверь подключение ST-Link, SWD-провода и питание устройства."),
                 ("Dumping internal flash...", "Чтение внутренней памяти MCU..."),
                 ("Verifying internal flash backup...", "Проверка резервной копии MCU..."),
                 ("Validating internal flash backup before unlock...", "Проверка резервной копии MCU перед разблокировкой..."),
@@ -1037,8 +1064,12 @@ class MainWindow(QMainWindow):
                 ("Missing payload", "Відсутній службовий образ"),
                 ("ERROR:", "ПОМИЛКА:"),
                 ("Attempting to dump SPI flash", "Початок читання SPI flash"),
-                ("Dumping 64 MiB SPI flash", "Читання 64 МіБ SPI flash"),
-                ("Successfully backed up 64 MiB SPI flash", "Резервну копію 64 МіБ SPI flash створено"),
+                ("Detecting SPI flash size", "Визначення розміру SPI flash"),
+                ("Dumping SPI flash", "Читання SPI flash"),
+                ("Successfully backed up SPI flash", "Резервну копію SPI flash створено"),
+                ("Protection status is UNKNOWN.", "Стан захисту UNKNOWN."),
+                ("Protection check failed:", "Перевірка захисту не вдалася:"),
+                ("Check ST-Link connection, SWD wiring, and device power.", "Перевір підключення ST-Link, SWD-дроти та живлення пристрою."),
                 ("Dumping internal flash...", "Читання внутрішньої пам'яті MCU..."),
                 ("Verifying internal flash backup...", "Перевірка резервної копії MCU..."),
                 ("Validating internal flash backup before unlock...", "Перевірка резервної копії MCU перед розблокуванням..."),
@@ -1283,6 +1314,8 @@ class MainWindow(QMainWindow):
         self.progress_start = time.monotonic()
         self.phase_start = self.progress_start
         self.step3_estimated_stage = ""
+        if script_name == "2_backup_flash.cmd":
+            self.spi_expected_size = 67_108_864
         self.last_progress_size = -1
         active_log = self.active_log_path(script_name)
         self.last_log_size = active_log.stat().st_size if active_log and active_log.exists() else 0
@@ -1333,8 +1366,8 @@ class MainWindow(QMainWindow):
             return
 
         backup_name = f"flash_backup_{self.target.currentText()}.bin"
-        backup_path = RUNTIME_ROOT / "backups" / backup_name
-        expected_size = 67_108_864
+        backup_path = BACKUPS / backup_name
+        expected_size = max(1, self.spi_expected_size)
 
         if backup_path.exists():
             size = backup_path.stat().st_size
@@ -1446,7 +1479,37 @@ class MainWindow(QMainWindow):
             except OSError:
                 pass
 
+        if script_name == "1_sanity_check.cmd":
+            if "Protection: UNKNOWN" in text or "Protection status is UNKNOWN" in text:
+                if self.lang == "en":
+                    return [
+                        "Cause: protection status could not be read.",
+                        "Check device power, SWDIO, SWCLK, GND, and ST-Link driver/connection, then repeat Step 1.",
+                    ]
+                return [
+                    "Причина: не удалось прочитать статус защиты.",
+                    "Проверь питание устройства, SWDIO, SWCLK, GND и подключение/драйвер ST-Link, затем повтори шаг 1.",
+                ] if self.lang == "ru" else [
+                    "Причина: не вдалося прочитати стан захисту.",
+                    "Перевір живлення пристрою, SWDIO, SWCLK, GND та підключення/драйвер ST-Link, потім повтори крок 1.",
+                ]
+
         if script_name == "2_backup_flash.cmd":
+            if "Step 1 did not complete successfully" in text:
+                return [self.tr("need_sanity")]
+            if "Get IDCODE error" in text or "STLink error" in text or "GNW_ERROR ProbeError" in text:
+                if self.lang == "en":
+                    return [
+                        "Cause: ST-Link is detected but cannot identify the target MCU.",
+                        "Check device power, SWDIO, SWCLK, GND, and reconnect ST-Link. Then run Step 1 again.",
+                    ]
+                return [
+                    "Причина: ST-Link виден, но не может определить процессор.",
+                    "Проверь питание устройства, SWDIO, SWCLK, GND, переподключи ST-Link и снова запусти шаг 1.",
+                ] if self.lang == "ru" else [
+                    "Причина: ST-Link видно, але він не може визначити процесор.",
+                    "Перевір живлення пристрою, SWDIO, SWCLK, GND, перепідключи ST-Link і знову запусти крок 1.",
+                ]
             if "another application is using the programmer" in text or "open failed" in text:
                 if self.lang == "en":
                     return [
@@ -1679,6 +1742,8 @@ class MainWindow(QMainWindow):
             return True
         if state["protection_unlocked"]:
             return script_name == "5_restore.cmd" and state["spi_backup"] and state["internal_backup"]
+        if script_name in ("2_backup_flash.cmd", "3_backup_internal_flash.cmd", "4_unlock_device.cmd") and not state["sanity"]:
+            return False
         if script_name == "4_unlock_device.cmd":
             return state["spi_backup"] and state["internal_backup"]
         if script_name == "5_restore.cmd":
@@ -1688,6 +1753,8 @@ class MainWindow(QMainWindow):
     def disabled_reason(self, script_name: str, state: dict[str, bool]) -> str:
         if state["protection_unlocked"]:
             return self.tr("disabled_unlocked")
+        if script_name in ("2_backup_flash.cmd", "3_backup_internal_flash.cmd", "4_unlock_device.cmd") and not state["sanity"]:
+            return self.tr("need_sanity")
         if script_name == "4_unlock_device.cmd":
             return self.tr("need_internal_backup")
         return self.tr("disabled_generic")

@@ -1,5 +1,21 @@
 # Release Notes
 
+## v1.0.1
+
+Protection and SPI detection fixes.
+
+- Stop Step 1 with an error when protection status is `UNKNOWN`.
+- Block Step 2/3/4 until Step 1 completes successfully.
+- Show a clear power/SWD/ST-Link connection hint when protection cannot be read.
+- Detect and display the SPI flash size through `gnwmanager` instead of printing a hard-coded size before detection.
+- Improve Step 2 error explanation for `STLink Get IDCODE` failures.
+
+SHA256:
+
+```text
+7D03861F419839F0B004CF8BA6F14D955AB8C16FA9DA68DD7E40F0055D22BE47  GWUnlock.exe
+```
+
 ## v1.0.0
 
 Initial public release of GWUnlock.

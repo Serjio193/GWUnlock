@@ -5,6 +5,7 @@ if errorlevel 1 exit /b %ERRORLEVEL%
 
 pushd "%UPSTREAM%" || exit /b 1
 echo Running sanity checks...
+del /q "%MARKERS%\sanity_%TARGET%.ok" >nul 2>&1
 del /q "%BACKUPS%\model_probe.bin" >nul 2>&1
 "%OPENOCD_EXE%" -s "%UPSTREAM%" -s "%OPENOCD_SCRIPTS%" -f "openocd/target_mario.cfg" -f "openocd/interface_%ADAPTER%.cfg" -c "init;" -c "halt;" -c "dump_image {%BACKUPS_TCL%/model_probe.bin} 0x0 1332" -c "exit;" > "logs\1_model_detect_current.log" 2>&1
 set "MODEL_RC=!ERRORLEVEL!"
@@ -66,6 +67,10 @@ if "!PROTECTION_RC!"=="0" (
   )
 ) else (
   del /q "%MARKERS%\unlock_%TARGET%.ok" >nul 2>&1
+  del /q "%MARKERS%\protection_locked_%TARGET%.ok" "%MARKERS%\protection_unlocked_%TARGET%.ok" >nul 2>&1
+  echo Protection status is UNKNOWN. Check ST-Link connection, SWD wiring, and device power.
+  popd
+  exit /b 1
 )
 
 "%OPENOCD_EXE%" -v >nul 2>&1
