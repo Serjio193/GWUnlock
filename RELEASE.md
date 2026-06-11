@@ -1,5 +1,21 @@
 # Release Notes
 
+## v1.0.2
+
+Update checker.
+
+- Check the latest GitHub Release on startup.
+- Ask the user before downloading or installing an update.
+- Download `GWUnlock.exe` and `GWUnlock.exe.sha256` only after user confirmation.
+- Verify the downloaded executable SHA256 before installation.
+- Replace the running executable through a local update script after GWUnlock exits.
+
+SHA256:
+
+```text
+41FDB0482C57C58BA632BEAA89C5871C25BEF28785CBE3E27AAF2A0933D7E27D  GWUnlock.exe
+```
+
 ## v1.0.1
 
 Protection and SPI detection fixes.

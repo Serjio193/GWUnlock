@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import os
 import runpy
 import shutil
@@ -10,6 +11,8 @@ import time
 import webbrowser
 from datetime import datetime
 from pathlib import Path
+from urllib.error import URLError
+from urllib.request import Request, urlopen
 
 from PySide6.QtCore import QLocale, QThread, QTimer, Signal
 from PySide6.QtGui import QIcon, QPixmap
@@ -29,8 +32,10 @@ from PySide6.QtWidgets import (
 
 
 FROZEN = bool(getattr(sys, "frozen", False))
-APP_VERSION = "1.0.1"
+APP_VERSION = "1.0.2"
 BUILD_DATE = "2026-06-11"
+GITHUB_LATEST_RELEASE_API = "https://api.github.com/repos/Serjio193/GWUnlock/releases/latest"
+GITHUB_RELEASES_URL = "https://github.com/Serjio193/GWUnlock/releases/latest"
 APP_ROOT = Path(sys.executable).resolve().parent if FROZEN else Path(__file__).resolve().parent
 ASSET_ROOT = Path(getattr(sys, "_MEIPASS", APP_ROOT)).resolve()
 APP_ICON = ASSET_ROOT / "resources" / "logo.ico"
@@ -42,6 +47,23 @@ STATE = BACKUPS / ".state" if FROZEN else RUNTIME_ROOT / "markers"
 STEPS = ASSET_ROOT / "steps"
 LOGS = RUNTIME_ROOT / "logs"
 ROOT = APP_ROOT
+
+
+def parse_version(value: str) -> tuple[int, int, int]:
+    parts = value.strip().lstrip("vV").split(".")
+    numbers = []
+    for part in parts[:3]:
+        digits = "".join(ch for ch in part if ch.isdigit())
+        numbers.append(int(digits or "0"))
+    while len(numbers) < 3:
+        numbers.append(0)
+    return tuple(numbers[:3])
+
+
+def http_get(url: str, timeout: int = 20) -> bytes:
+    request = Request(url, headers={"User-Agent": f"GWUnlock/{APP_VERSION}"})
+    with urlopen(request, timeout=timeout) as response:
+        return response.read()
 
 
 def internal_python_main(arguments: list[str]) -> int:
@@ -239,6 +261,13 @@ LANGS = {
         "driver_text": "Windows обнаружила программатор, но драйвер работает неправильно.\n\nОткрыть официальную страницу установки драйвера?",
         "sha_line": "SHA256 программы",
         "auto_read_after_unlock": "Разблокировка завершена. Автоматически перечитываю информацию устройства...",
+        "update_title": "Обновление GWUnlock",
+        "update_available": "Доступна новая версия GWUnlock {latest}.\n\nТекущая версия: {current}\n\nСкачать и установить обновление?",
+        "update_downloading": "Скачивание обновления и проверка SHA256...",
+        "update_ready": "Обновление скачано и SHA256 проверен.\n\nSHA256:\n{sha256}\n\nЗакрыть программу и установить обновление сейчас?",
+        "update_failed": "Не удалось обновить программу:\n{error}",
+        "update_failed_short": "Обновление не выполнено.",
+        "update_postponed": "Обновление отложено пользователем.",
     },
     "uk": {
         "language_name": "Українська",
@@ -332,6 +361,13 @@ LANGS = {
         "driver_text": "Windows виявила програматор, але драйвер працює неправильно.\n\nВідкрити офіційну сторінку встановлення драйвера?",
         "sha_line": "SHA256 програми",
         "auto_read_after_unlock": "Розблокування завершено. Автоматично перечитую інформацію пристрою...",
+        "update_title": "Оновлення GWUnlock",
+        "update_available": "Доступна нова версія GWUnlock {latest}.\n\nПоточна версія: {current}\n\nЗавантажити та встановити оновлення?",
+        "update_downloading": "Завантаження оновлення та перевірка SHA256...",
+        "update_ready": "Оновлення завантажено і SHA256 перевірено.\n\nSHA256:\n{sha256}\n\nЗакрити програму та встановити оновлення зараз?",
+        "update_failed": "Не вдалося оновити програму:\n{error}",
+        "update_failed_short": "Оновлення не виконано.",
+        "update_postponed": "Оновлення відкладено користувачем.",
     },
     "en": {
         "language_name": "English",
@@ -425,6 +461,13 @@ LANGS = {
         "driver_text": "Windows detected the debug probe, but its driver is not working correctly.\n\nOpen the official driver installation page?",
         "sha_line": "Program SHA256",
         "auto_read_after_unlock": "Unlock completed. Reading device information automatically...",
+        "update_title": "GWUnlock update",
+        "update_available": "A new GWUnlock version {latest} is available.\n\nCurrent version: {current}\n\nDownload and install the update?",
+        "update_downloading": "Downloading update and verifying SHA256...",
+        "update_ready": "The update was downloaded and SHA256 was verified.\n\nSHA256:\n{sha256}\n\nClose the program and install the update now?",
+        "update_failed": "Could not update the program:\n{error}",
+        "update_failed_short": "Update was not completed.",
+        "update_postponed": "Update postponed by user.",
     },
 }
 
@@ -461,6 +504,77 @@ class StepWorker(QThread):
             self.finished_code.emit(1)
 
 
+class UpdateCheckWorker(QThread):
+    update_available = Signal(dict)
+    update_error = Signal(str)
+
+    def run(self) -> None:
+        if not FROZEN:
+            return
+        try:
+            payload = json.loads(http_get(GITHUB_LATEST_RELEASE_API).decode("utf-8"))
+            tag = str(payload.get("tag_name", "")).strip()
+            if not tag or parse_version(tag) <= parse_version(APP_VERSION):
+                return
+            assets = payload.get("assets", [])
+            exe_url = ""
+            sha_url = ""
+            for asset in assets:
+                name = str(asset.get("name", ""))
+                url = str(asset.get("browser_download_url", ""))
+                if name.lower() == "gwunlock.exe":
+                    exe_url = url
+                elif name.lower() == "gwunlock.exe.sha256":
+                    sha_url = url
+            if not exe_url or not sha_url:
+                self.update_error.emit("Latest release does not contain GWUnlock.exe and GWUnlock.exe.sha256.")
+                return
+            self.update_available.emit(
+                {
+                    "version": tag.lstrip("vV"),
+                    "tag": tag,
+                    "url": str(payload.get("html_url") or GITHUB_RELEASES_URL),
+                    "exe_url": exe_url,
+                    "sha_url": sha_url,
+                }
+            )
+        except (OSError, URLError, TimeoutError, json.JSONDecodeError) as exc:
+            self.update_error.emit(str(exc))
+
+
+class UpdateDownloadWorker(QThread):
+    update_ready = Signal(str, str)
+    update_error = Signal(str)
+
+    def __init__(self, info: dict) -> None:
+        super().__init__()
+        self.info = info
+
+    def run(self) -> None:
+        try:
+            update_dir = APP_ROOT / "updates"
+            update_dir.mkdir(parents=True, exist_ok=True)
+            version = self.info["version"]
+            sha_text = http_get(self.info["sha_url"], timeout=30).decode("utf-8", errors="replace").strip()
+            expected_sha = sha_text.split()[0].upper()
+            temp_path = update_dir / f"GWUnlock-{version}.exe.download"
+            final_path = update_dir / f"GWUnlock-{version}.exe"
+            temp_path.write_bytes(http_get(self.info["exe_url"], timeout=180))
+            actual_sha = calculate_file_sha256(temp_path)
+            if actual_sha != expected_sha:
+                temp_path.unlink(missing_ok=True)
+                self.update_error.emit(
+                    f"SHA256 mismatch. Expected {expected_sha}, got {actual_sha}."
+                )
+                return
+            if final_path.exists():
+                final_path.unlink()
+            temp_path.rename(final_path)
+            self.update_ready.emit(str(final_path), expected_sha)
+        except (OSError, URLError, TimeoutError, KeyError) as exc:
+            self.update_error.emit(str(exc))
+
+
 class MainWindow(QMainWindow):
     def __init__(self) -> None:
         super().__init__()
@@ -479,6 +593,9 @@ class MainWindow(QMainWindow):
         self.dark_theme = True
         self.pending_backup_restart = False
         self.protection_status: str | None = None
+        self.update_check_worker: UpdateCheckWorker | None = None
+        self.update_download_worker: UpdateDownloadWorker | None = None
+        self.pending_update_info: dict | None = None
 
         self.setWindowTitle("GWUnlock")
         if APP_ICON.exists():
@@ -595,6 +712,7 @@ class MainWindow(QMainWindow):
         self.refresh_state()
         self.state_timer.start()
         QTimer.singleShot(500, self.check_driver_status)
+        QTimer.singleShot(1500, self.check_for_updates)
 
     def tr(self, key: str) -> str:
         return LANGS[self.lang].get(key, LANGS["ru"].get(key, key))
@@ -707,6 +825,115 @@ class MainWindow(QMainWindow):
             "cmsis-dap": "https://pyocd.io/docs/debug_probes.html#cmsis-dap",
         }
         webbrowser.open(links.get(problem, links["cmsis-dap"]))
+
+    def check_for_updates(self) -> None:
+        if not FROZEN:
+            return
+        if self.update_check_worker is not None and self.update_check_worker.isRunning():
+            return
+        self.update_check_worker = UpdateCheckWorker()
+        self.update_check_worker.update_available.connect(self.on_update_available)
+        self.update_check_worker.update_error.connect(self.on_update_error)
+        self.update_check_worker.start()
+
+    def on_update_available(self, info: dict) -> None:
+        self.pending_update_info = info
+        answer = QMessageBox.question(
+            self,
+            self.tr("update_title"),
+            self.tr("update_available").format(
+                current=APP_VERSION,
+                latest=info["version"],
+            ),
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.Yes,
+        )
+        if answer == QMessageBox.StandardButton.Yes:
+            self.download_update(info)
+
+    def on_update_error(self, message: str) -> None:
+        try:
+            with self.history_path.open("a", encoding="utf-8") as history:
+                history.write(f"[update] {message}\n")
+        except OSError:
+            pass
+
+    def download_update(self, info: dict) -> None:
+        if self.update_download_worker is not None and self.update_download_worker.isRunning():
+            return
+        self.instructions.setText(self.tr("update_downloading"))
+        self.update_download_worker = UpdateDownloadWorker(info)
+        self.update_download_worker.update_ready.connect(self.on_update_ready)
+        self.update_download_worker.update_error.connect(self.on_update_download_error)
+        self.update_download_worker.start()
+
+    def on_update_download_error(self, message: str) -> None:
+        QMessageBox.warning(
+            self,
+            self.tr("update_title"),
+            self.tr("update_failed").format(error=message),
+        )
+        self.instructions.setText(self.tr("update_failed_short"))
+
+    def on_update_ready(self, new_exe: str, sha256: str) -> None:
+        answer = QMessageBox.question(
+            self,
+            self.tr("update_title"),
+            self.tr("update_ready").format(sha256=sha256),
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.Yes,
+        )
+        if answer != QMessageBox.StandardButton.Yes:
+            self.instructions.setText(self.tr("update_postponed"))
+            return
+        try:
+            script_path = self.create_update_script(Path(new_exe))
+            subprocess.Popen(
+                ["cmd.exe", "/c", str(script_path)],
+                cwd=str(APP_ROOT),
+                creationflags=subprocess.CREATE_NO_WINDOW,
+            )
+        except OSError as exc:
+            QMessageBox.warning(
+                self,
+                self.tr("update_title"),
+                self.tr("update_failed").format(error=str(exc)),
+            )
+            return
+        QApplication.quit()
+
+    def create_update_script(self, new_exe: Path) -> Path:
+        current_exe = Path(sys.executable).resolve()
+        script_path = APP_ROOT / "updates" / "apply_update.cmd"
+        script = f"""@echo off
+setlocal
+set "SRC={new_exe}"
+set "DST={current_exe}"
+set "OLD={current_exe}.old"
+set "PID={os.getpid()}"
+:wait
+tasklist /FI "PID eq %PID%" 2>nul | find "%PID%" >nul
+if not errorlevel 1 (
+  timeout /t 1 /nobreak >nul
+  goto wait
+)
+if exist "%OLD%" del /q "%OLD%" >nul 2>&1
+move /y "%DST%" "%OLD%" >nul
+if errorlevel 1 goto failed
+move /y "%SRC%" "%DST%" >nul
+if errorlevel 1 (
+  move /y "%OLD%" "%DST%" >nul
+  goto failed
+)
+start "" "%DST%"
+exit /b 0
+:failed
+echo Failed to apply GWUnlock update.
+pause
+exit /b 1
+"""
+        script_path.write_text(script, encoding="ascii")
+        return script_path
 
     def append(self, text: str) -> None:
         self.step_raw_lines.append(text)
