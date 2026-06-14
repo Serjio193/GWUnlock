@@ -53,6 +53,17 @@ if not defined SPI_EXPECTED_SIZE (
 )
 for %%F in ("%BACKUPS%\flash_backup_%TARGET%.bin") do set "SPI_SIZE=%%~zF"
 for %%F in ("%BACKUPS%\internal_flash_backup_%TARGET%.bin") do set "MCU_SIZE=%%~zF"
+if %SPI_SIZE% LEQ 0 (
+  echo SPI backup is empty. Restore cancelled.
+  popd
+  exit /b 1
+)
+set /a SPI_REMAINDER=%SPI_SIZE% %% 4096
+if not "%SPI_REMAINDER%"=="0" (
+  echo SPI backup has invalid alignment: %SPI_SIZE% bytes. Expected a 4096-byte aligned image.
+  popd
+  exit /b 1
+)
 if %SPI_SIZE% GTR %SPI_EXPECTED_SIZE% (
   echo SPI backup has unexpected size: %SPI_SIZE% bytes. Device SPI is %SPI_EXPECTED_SIZE% bytes.
   popd

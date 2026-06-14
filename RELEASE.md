@@ -1,5 +1,22 @@
 # Release Notes
 
+## v1.0.6
+
+Version status, updater restart, and restore validation.
+
+- Show the current GWUnlock version in the top-right corner.
+- Mark the version as latest after a successful update check when no newer release exists.
+- Show the available release version when an update is found.
+- Start the update installer as a detached process and force-close the old process so the downloaded EXE can replace it.
+- Write updater diagnostics to `updates/update.log`.
+- Reject empty or non-4096-byte-aligned SPI backup files during restore.
+
+SHA256:
+
+```text
+3EC3E0AD23A6262D086D3454BDE428D4D260E4486E13D75C6C869A4ED82A4843  GWUnlock.exe
+```
+
 ## v1.0.5
 
 Restore compatibility for smaller SPI images.

@@ -32,7 +32,7 @@ from PySide6.QtWidgets import (
 
 
 FROZEN = bool(getattr(sys, "frozen", False))
-APP_VERSION = "1.0.5"
+APP_VERSION = "1.0.6"
 BUILD_DATE = "2026-06-14"
 GITHUB_LATEST_RELEASE_API = "https://api.github.com/repos/Serjio193/GWUnlock/releases/latest"
 GITHUB_RELEASES_URL = "https://github.com/Serjio193/GWUnlock/releases/latest"
@@ -268,6 +268,8 @@ LANGS = {
         "update_failed": "Не удалось обновить программу:\n{error}",
         "update_failed_short": "Обновление не выполнено.",
         "update_postponed": "Обновление отложено пользователем.",
+        "version_latest": "последняя",
+        "version_update": "доступна {version}",
     },
     "uk": {
         "language_name": "Українська",
@@ -368,6 +370,8 @@ LANGS = {
         "update_failed": "Не вдалося оновити програму:\n{error}",
         "update_failed_short": "Оновлення не виконано.",
         "update_postponed": "Оновлення відкладено користувачем.",
+        "version_latest": "остання",
+        "version_update": "доступна {version}",
     },
     "en": {
         "language_name": "English",
@@ -468,6 +472,8 @@ LANGS = {
         "update_failed": "Could not update the program:\n{error}",
         "update_failed_short": "Update was not completed.",
         "update_postponed": "Update postponed by user.",
+        "version_latest": "Latest",
+        "version_update": "available {version}",
     },
 }
 
@@ -506,6 +512,7 @@ class StepWorker(QThread):
 
 class UpdateCheckWorker(QThread):
     update_available = Signal(dict)
+    update_current = Signal()
     update_error = Signal(str)
 
     def run(self) -> None:
@@ -515,6 +522,7 @@ class UpdateCheckWorker(QThread):
             payload = json.loads(http_get(GITHUB_LATEST_RELEASE_API).decode("utf-8"))
             tag = str(payload.get("tag_name", "")).strip()
             if not tag or parse_version(tag) <= parse_version(APP_VERSION):
+                self.update_current.emit()
                 return
             assets = payload.get("assets", [])
             exe_url = ""
@@ -596,6 +604,7 @@ class MainWindow(QMainWindow):
         self.update_check_worker: UpdateCheckWorker | None = None
         self.update_download_worker: UpdateDownloadWorker | None = None
         self.pending_update_info: dict | None = None
+        self.latest_version_status = "unknown"
 
         self.setWindowTitle("GWUnlock")
         if APP_ICON.exists():
@@ -654,6 +663,7 @@ class MainWindow(QMainWindow):
         self.speed_label = QLabel()
         self.language_label = QLabel("Language")
         self.theme_label = QLabel()
+        self.version_label = QLabel()
         top.addWidget(self.adapter_label)
         top.addWidget(self.adapter)
         top.addWidget(self.target_label)
@@ -665,6 +675,7 @@ class MainWindow(QMainWindow):
         top.addWidget(self.theme_label)
         top.addWidget(self.theme_button)
         top.addStretch(1)
+        top.addWidget(self.version_label)
         top.addWidget(self.status)
         layout.addLayout(top)
         layout.addWidget(self.state_label)
@@ -768,6 +779,7 @@ class MainWindow(QMainWindow):
         self.confirm_no.setText(self.tr("no"))
         self.step3_continue.setText(self.tr("continue"))
         self.sha_label.setText(f"{self.tr('sha_line')}: {self.exe_sha256}")
+        self.update_version_label()
         tooltips = {
             "ru": "Mario и Zelda используют разные смещения SPI/ITCM и разные контрольные суммы.",
             "uk": "Mario і Zelda використовують різні зміщення SPI/ITCM та різні контрольні суми.",
@@ -833,11 +845,14 @@ class MainWindow(QMainWindow):
             return
         self.update_check_worker = UpdateCheckWorker()
         self.update_check_worker.update_available.connect(self.on_update_available)
+        self.update_check_worker.update_current.connect(self.on_update_current)
         self.update_check_worker.update_error.connect(self.on_update_error)
         self.update_check_worker.start()
 
     def on_update_available(self, info: dict) -> None:
         self.pending_update_info = info
+        self.latest_version_status = f"update:{info['version']}"
+        self.update_version_label()
         answer = QMessageBox.question(
             self,
             self.tr("update_title"),
@@ -850,6 +865,10 @@ class MainWindow(QMainWindow):
         )
         if answer == QMessageBox.StandardButton.Yes:
             self.download_update(info)
+
+    def on_update_current(self) -> None:
+        self.latest_version_status = "latest"
+        self.update_version_label()
 
     def on_update_error(self, message: str) -> None:
         try:
@@ -889,7 +908,7 @@ class MainWindow(QMainWindow):
         try:
             script_path = self.create_update_script(Path(new_exe))
             subprocess.Popen(
-                ["cmd.exe", "/c", str(script_path)],
+                ["cmd.exe", "/c", "start", "", "/min", str(script_path)],
                 cwd=str(APP_ROOT),
                 creationflags=subprocess.CREATE_NO_WINDOW,
             )
@@ -901,6 +920,7 @@ class MainWindow(QMainWindow):
             )
             return
         QApplication.quit()
+        QTimer.singleShot(700, lambda: os._exit(0))
 
     def create_update_script(self, new_exe: Path) -> Path:
         current_exe = Path(sys.executable).resolve()
@@ -911,29 +931,53 @@ set "SRC={new_exe}"
 set "DST={current_exe}"
 set "OLD={current_exe}.old"
 set "PID={os.getpid()}"
+set "LOG=%~dp0update.log"
+for %%D in ("%~dp0..") do set "APPDIR=%%~fD"
+echo [%DATE% %TIME%] GWUnlock update started.>"%LOG%"
+echo SRC=%SRC%>>"%LOG%"
+echo DST=%DST%>>"%LOG%"
 :wait
 tasklist /FI "PID eq %PID%" 2>nul | find "%PID%" >nul
 if not errorlevel 1 (
+  echo Waiting for old process %PID%...>>"%LOG%"
   timeout /t 1 /nobreak >nul
   goto wait
 )
 if exist "%OLD%" del /q "%OLD%" >nul 2>&1
-move /y "%DST%" "%OLD%" >nul
+move /y "%DST%" "%OLD%" >>"%LOG%" 2>&1
 if errorlevel 1 goto failed
-move /y "%SRC%" "%DST%" >nul
+move /y "%SRC%" "%DST%" >>"%LOG%" 2>&1
 if errorlevel 1 (
-  move /y "%OLD%" "%DST%" >nul
+  move /y "%OLD%" "%DST%" >>"%LOG%" 2>&1
   goto failed
 )
+cd /d "%APPDIR%"
+echo Starting updated GWUnlock.>>"%LOG%"
 start "" "%DST%"
 exit /b 0
 :failed
-echo Failed to apply GWUnlock update.
+echo Failed to apply GWUnlock update.>>"%LOG%"
 pause
 exit /b 1
 """
         script_path.write_text(script, encoding="ascii")
         return script_path
+
+    def update_version_label(self) -> None:
+        if self.latest_version_status == "latest":
+            suffix = self.tr("version_latest")
+            color = "#19a34a"
+        elif self.latest_version_status.startswith("update:"):
+            suffix = self.tr("version_update").format(
+                version=self.latest_version_status.split(":", 1)[1]
+            )
+            color = "#e0a21a"
+        else:
+            suffix = ""
+            color = "#bdbdbd"
+        text = f"v{APP_VERSION}" + (f" | {suffix}" if suffix else "")
+        self.version_label.setText(text)
+        self.version_label.setStyleSheet(f"color: {color}; font-weight: bold; padding-right: 10px;")
 
     def append(self, text: str) -> None:
         self.step_raw_lines.append(text)
@@ -1204,6 +1248,8 @@ exit /b 1
                 ("Existing internal flash backup is invalid.", "Существующая резервная копия MCU некорректна."),
                 ("Removing stale payload image", "Удаление незавершённого служебного образа"),
                 ("SPI backup is missing.", "Резервная копия SPI отсутствует."),
+                ("SPI backup is empty.", "Резервная копия SPI пустая."),
+                ("SPI backup has invalid alignment:", "Резервная копия SPI имеет неверное выравнивание:"),
                 ("SPI backup has unexpected size:", "Неверный размер резервной копии SPI:"),
                 ("SPI backup is smaller than detected SPI:", "Резервная копия SPI меньше обнаруженной SPI:"),
                 ("Internal flash backup is missing.", "Резервная копия MCU отсутствует."),
@@ -1279,6 +1325,8 @@ exit /b 1
                 ("Existing internal flash backup is invalid.", "Наявна резервна копія MCU некоректна."),
                 ("Removing stale payload image", "Видалення незавершеного службового образу"),
                 ("SPI backup is missing.", "Резервна копія SPI відсутня."),
+                ("SPI backup is empty.", "Резервна копія SPI порожня."),
+                ("SPI backup has invalid alignment:", "Резервна копія SPI має неправильне вирівнювання:"),
                 ("SPI backup has unexpected size:", "Неправильний розмір резервної копії SPI:"),
                 ("SPI backup is smaller than detected SPI:", "Резервна копія SPI менша за виявлену SPI:"),
                 ("Internal flash backup is missing.", "Резервна копія MCU відсутня."),
