@@ -1,5 +1,19 @@
 # Release Notes
 
+## v1.0.5
+
+Restore compatibility for smaller SPI images.
+
+- Allow Step 5 Restore to use an SPI backup that is smaller than the detected physical SPI flash.
+- Keep rejecting SPI backup files that are larger than the detected device flash.
+- Log when a smaller image is restored at the SPI base address.
+
+SHA256:
+
+```text
+86379AFEFC6A334D7F48165CED6499877E1145421C624FE925EE5F60DE40BCE5  GWUnlock.exe
+```
+
 ## v1.0.4
 
 Restore button and third-party notices update.

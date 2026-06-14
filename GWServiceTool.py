@@ -32,7 +32,7 @@ from PySide6.QtWidgets import (
 
 
 FROZEN = bool(getattr(sys, "frozen", False))
-APP_VERSION = "1.0.4"
+APP_VERSION = "1.0.5"
 BUILD_DATE = "2026-06-14"
 GITHUB_LATEST_RELEASE_API = "https://api.github.com/repos/Serjio193/GWUnlock/releases/latest"
 GITHUB_RELEASES_URL = "https://github.com/Serjio193/GWUnlock/releases/latest"
@@ -1205,6 +1205,7 @@ exit /b 1
                 ("Removing stale payload image", "Удаление незавершённого служебного образа"),
                 ("SPI backup is missing.", "Резервная копия SPI отсутствует."),
                 ("SPI backup has unexpected size:", "Неверный размер резервной копии SPI:"),
+                ("SPI backup is smaller than detected SPI:", "Резервная копия SPI меньше обнаруженной SPI:"),
                 ("Internal flash backup is missing.", "Резервная копия MCU отсутствует."),
                 ("Backup is not valid.", "Резервная копия некорректна."),
                 ("The backup of the internal flash failed.", "Не удалось создать резервную копию MCU."),
@@ -1279,6 +1280,7 @@ exit /b 1
                 ("Removing stale payload image", "Видалення незавершеного службового образу"),
                 ("SPI backup is missing.", "Резервна копія SPI відсутня."),
                 ("SPI backup has unexpected size:", "Неправильний розмір резервної копії SPI:"),
+                ("SPI backup is smaller than detected SPI:", "Резервна копія SPI менша за виявлену SPI:"),
                 ("Internal flash backup is missing.", "Резервна копія MCU відсутня."),
                 ("Backup is not valid.", "Резервна копія некоректна."),
                 ("The backup of the internal flash failed.", "Не вдалося створити резервну копію MCU."),

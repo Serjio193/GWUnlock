@@ -53,10 +53,13 @@ if not defined SPI_EXPECTED_SIZE (
 )
 for %%F in ("%BACKUPS%\flash_backup_%TARGET%.bin") do set "SPI_SIZE=%%~zF"
 for %%F in ("%BACKUPS%\internal_flash_backup_%TARGET%.bin") do set "MCU_SIZE=%%~zF"
-if not "%SPI_SIZE%"=="%SPI_EXPECTED_SIZE%" (
-  echo SPI backup has unexpected size: %SPI_SIZE% bytes. Expected %SPI_EXPECTED_SIZE% bytes from Step 1.
+if %SPI_SIZE% GTR %SPI_EXPECTED_SIZE% (
+  echo SPI backup has unexpected size: %SPI_SIZE% bytes. Device SPI is %SPI_EXPECTED_SIZE% bytes.
   popd
   exit /b 1
+)
+if not "%SPI_SIZE%"=="%SPI_EXPECTED_SIZE%" (
+  echo SPI backup is smaller than detected SPI: %SPI_SIZE% bytes of %SPI_EXPECTED_SIZE% bytes. Restoring this image at SPI base address.
 )
 echo Restore source SPI: %BACKUPS%\flash_backup_%TARGET%.bin (%SPI_SIZE% bytes)
 echo Restore source MCU: %BACKUPS%\internal_flash_backup_%TARGET%.bin (%MCU_SIZE% bytes)
