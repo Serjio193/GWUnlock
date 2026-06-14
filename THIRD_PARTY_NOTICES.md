@@ -54,6 +54,8 @@ Users are responsible for creating and preserving backups from their own devices
 
 This project is not affiliated with, endorsed by, or associated with Nintendo, STMicroelectronics, Qt Group, OpenOCD, or any other company or upstream project mentioned in this repository.
 
-## Full License Texts
+## License Texts
 
-Full license texts for bundled third-party components are included in the `licenses/` directory and should be distributed together with binary releases.
+License texts and notices for bundled third-party components are included in the `licenses/` directory and should be distributed together with binary releases.
+
+For MinGW/GCC runtime DLLs bundled through the OpenOCD package, see `licenses/mingw-runtime/README.txt`; exact runtime notices should be verified against the OpenOCD binary package used for the release.

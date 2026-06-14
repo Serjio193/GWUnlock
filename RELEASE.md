@@ -1,5 +1,24 @@
 # Release Notes
 
+## v1.0.9
+
+Complete bundled license texts.
+
+- Replace shortened Python license file with the full CPython 3.13.2 license text.
+- Replace PyInstaller GPL text with the upstream PyInstaller 6.19.0 `COPYING.txt`.
+- Add PySide6 license aliases: `LICENSE.LGPL3.txt`, `LICENSE.GPL2.txt`, and `LICENSE.GPL3.txt`.
+- Add upstream hidapi `LICENSE.txt` and `LICENSE-bsd.txt`.
+- Add libjaylink `COPYING.txt`.
+- Replace the MinGW runtime placeholder with a verification README describing the bundled runtime DLLs.
+- Update license manifest and third-party notices to match the actual repository layout.
+
+SHA256:
+
+```text
+C9A45813AD70435717723810A3400734DEAF0050DFBE79A5672CDB553FC48C75  GWUnlock.exe
+BBF7816C29B775F397589FB76E4C194AD028018C607F926CB3681FD0B88F12D1  GWUnlock-v1.0.9-windows-x64.zip
+```
+
 ## v1.0.8
 
 License file layout compatibility.

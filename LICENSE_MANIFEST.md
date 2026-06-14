@@ -14,17 +14,24 @@ Confirmed by current GWUnlock documentation:
 Repository license file layout:
 
 - `licenses/python/LICENSE.txt`
+- `licenses/pyside6/LICENSE.LGPL3.txt`
+- `licenses/pyside6/LICENSE.GPL2.txt`
+- `licenses/pyside6/LICENSE.GPL3.txt`
 - `licenses/pyinstaller/COPYING.txt`
 - `licenses/pyinstaller/BOOTLOADER_EXCEPTION.txt`
 - `licenses/gnwmanager/LICENSE.txt`
 - `licenses/pyocd/LICENSE.txt`
 - `licenses/openocd/COPYING.txt`
 - `licenses/libusb/COPYING.txt`
+- `licenses/hidapi/LICENSE.txt`
+- `licenses/hidapi/LICENSE-bsd.txt`
+- `licenses/libjaylink/COPYING.txt`
+- `licenses/mingw-runtime/README.txt`
 
 Needs verification from exact build/release files:
 
 - [ ] libusb license file from exact OpenOCD package.
-- [ ] hidapi license file from exact OpenOCD package.
-- [ ] libjaylink license file from exact OpenOCD package, if present.
-- [ ] libgcc / winpthread / MinGW runtime license files, if present.
+- [x] hidapi license files from upstream hidapi repository.
+- [x] libjaylink COPYING file from upstream libjaylink mirror.
+- [ ] libgcc / winpthread / MinGW runtime license files from the exact OpenOCD package, if present.
 - [ ] Any additional Python package licenses from `pip freeze` / PyInstaller analysis output.
