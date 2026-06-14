@@ -1,5 +1,22 @@
 # Release Notes
 
+## v1.0.7
+
+License pack integration.
+
+- Add full third-party license text directory under `licenses/`.
+- Add `LICENSE_MANIFEST.md` and release packing instructions.
+- Include license notices and license texts in the PyInstaller bundle.
+- Update README with explicit license distribution notes.
+- Prepare release ZIP packaging with EXE, SHA256, notices, manifest, and full license texts.
+
+SHA256:
+
+```text
+1CBD488CED5D67A58BA26142EECCF7A8631AA44CD4D62EC3D4A83E6B24199054  GWUnlock.exe
+1FA8F1D41EF1FC3B6C6E328C05AEB8AD7DFC9A0F5F52180A74A544ABBC748794  GWUnlock-v1.0.7-windows-x64.zip
+```
+
 ## v1.0.6
 
 Version status, updater restart, and restore validation.

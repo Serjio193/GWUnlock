@@ -72,6 +72,14 @@ This project uses or bundles the following third-party components:
 
 See `THIRD_PARTY_NOTICES.md` for additional information.
 
+## Licenses
+
+GWUnlock source code is released under the Unlicense.
+
+GWUnlock release binaries bundle third-party components under their own licenses. Third-party license information is provided in `THIRD_PARTY_NOTICES.md`. Full license texts for bundled components are provided in the `licenses/` directory.
+
+The ST-Link USB driver is not bundled with GWUnlock and must be installed separately by the user.
+
 ## Disclaimer
 
 This project is not affiliated with, endorsed by, or associated with Nintendo, STMicroelectronics, or any other company mentioned in this repository.

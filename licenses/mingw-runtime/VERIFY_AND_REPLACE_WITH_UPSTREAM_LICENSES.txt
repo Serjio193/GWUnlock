@@ -1,0 +1,3 @@
+Verify whether libgcc, winpthread/winpthreads, or other MinGW runtime files are bundled through the OpenOCD runtime used by GWUnlock.
+
+If bundled, include the corresponding GCC Runtime Library Exception / MinGW-w64 / winpthreads license texts from the exact package used in the release build.

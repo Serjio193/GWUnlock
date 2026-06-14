@@ -1,0 +1,3 @@
+Verify whether libjaylink is bundled through the OpenOCD runtime used by GWUnlock.
+
+If bundled, replace this file with the upstream libjaylink license/notice file from the exact package used in the release build.

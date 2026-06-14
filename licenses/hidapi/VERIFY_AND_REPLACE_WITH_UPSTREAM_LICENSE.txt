@@ -1,0 +1,3 @@
+Verify the exact hidapi build bundled through OpenOCD and replace this file with the upstream hidapi license file from that package.
+
+Do not guess this license from memory; use the exact package used in the release build.

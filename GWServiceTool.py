@@ -32,7 +32,7 @@ from PySide6.QtWidgets import (
 
 
 FROZEN = bool(getattr(sys, "frozen", False))
-APP_VERSION = "1.0.6"
+APP_VERSION = "1.0.7"
 BUILD_DATE = "2026-06-14"
 GITHUB_LATEST_RELEASE_API = "https://api.github.com/repos/Serjio193/GWUnlock/releases/latest"
 GITHUB_RELEASES_URL = "https://github.com/Serjio193/GWUnlock/releases/latest"
