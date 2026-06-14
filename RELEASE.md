@@ -1,5 +1,20 @@
 # Release Notes
 
+## v1.0.4
+
+Restore button and third-party notices update.
+
+- Allow Step 5 Restore on already-unlocked devices when SPI and MCU backups are present.
+- If the stored SPI size marker is missing, Step 5 reads the SPI flash size from the device before restore.
+- Keep restore validation tied to the detected device size instead of a hard-coded size.
+- Expand `THIRD_PARTY_NOTICES.md` with component versions, licenses, upstream links, OpenOCD runtime dependencies, Qt/PySide6 LGPL notice, and firmware/ROM disclaimer.
+
+SHA256:
+
+```text
+11B6C849D63747F4E2F66FAFB0EA7555A40B70FE314C71BD004117D1A4657105  GWUnlock.exe
+```
+
 ## v1.0.3
 
 Dynamic SPI flash size handling.

@@ -1,5 +1,5 @@
 @echo off
-setlocal EnableExtensions
+setlocal EnableExtensions EnableDelayedExpansion
 call "%~dp0common.cmd" %*
 if errorlevel 1 exit /b %ERRORLEVEL%
 
@@ -27,11 +27,25 @@ if not exist "%BACKUPS%\flash_backup_%TARGET%.bin" (
   exit /b 1
 )
 if not exist "%MARKERS%\spi_size_%TARGET%.ok" (
-  echo SPI flash size is missing. Run Step 1 first.
-  popd
-  exit /b 1
+  echo SPI flash size is missing. Reading it from device now.
+  %PY_EXE% -u "%TOOL_ROOT%\tools\gnw_spi_progress.py" --frequency %GNW_FREQUENCY% info-ext > "logs\5_spi_size_current.log" 2>&1
+  set "SPI_SIZE_RC=!ERRORLEVEL!"
+  type "logs\5_spi_size_current.log"
+  if not "!SPI_SIZE_RC!"=="0" (
+    echo SPI flash size is UNKNOWN. Check ST-Link connection, SWD wiring, and device power.
+    popd
+    exit /b 1
+  )
+  for /f "tokens=2" %%S in ('findstr /B /C:"GNW_FLASH_SIZE " "logs\5_spi_size_current.log"') do set "SPI_EXPECTED_SIZE=%%S"
+  if not defined SPI_EXPECTED_SIZE (
+    echo SPI flash size is UNKNOWN. Check ST-Link connection, SWD wiring, and device power.
+    popd
+    exit /b 1
+  )
+  echo !SPI_EXPECTED_SIZE!>"%MARKERS%\spi_size_%TARGET%.ok"
+  echo SPI flash size: !SPI_EXPECTED_SIZE! bytes
 )
-set /p SPI_EXPECTED_SIZE=<"%MARKERS%\spi_size_%TARGET%.ok"
+if not defined SPI_EXPECTED_SIZE set /p SPI_EXPECTED_SIZE=<"%MARKERS%\spi_size_%TARGET%.ok"
 if not defined SPI_EXPECTED_SIZE (
   echo SPI flash size is missing. Run Step 1 first.
   popd

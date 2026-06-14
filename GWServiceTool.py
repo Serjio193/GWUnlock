@@ -32,8 +32,8 @@ from PySide6.QtWidgets import (
 
 
 FROZEN = bool(getattr(sys, "frozen", False))
-APP_VERSION = "1.0.3"
-BUILD_DATE = "2026-06-11"
+APP_VERSION = "1.0.4"
+BUILD_DATE = "2026-06-14"
 GITHUB_LATEST_RELEASE_API = "https://api.github.com/repos/Serjio193/GWUnlock/releases/latest"
 GITHUB_RELEASES_URL = "https://github.com/Serjio193/GWUnlock/releases/latest"
 APP_ROOT = Path(sys.executable).resolve().parent if FROZEN else Path(__file__).resolve().parent
@@ -1233,6 +1233,7 @@ exit /b 1
                 ("Protection check failed:", "Проверка защиты не удалась:"),
                 ("Check ST-Link connection, SWD wiring, and device power.", "Проверь подключение ST-Link, SWD-провода и питание устройства."),
                 ("Reading SPI flash size...", "Чтение размера SPI flash..."),
+                ("SPI flash size is missing. Reading it from device now.", "Размер SPI flash отсутствует. Читаю его с устройства."),
                 ("SPI flash size is missing.", "Размер SPI flash отсутствует."),
                 ("SPI flash size is UNKNOWN.", "Размер SPI flash UNKNOWN."),
                 ("SPI flash size:", "Размер SPI flash:"),
@@ -1306,6 +1307,7 @@ exit /b 1
                 ("Protection check failed:", "Перевірка захисту не вдалася:"),
                 ("Check ST-Link connection, SWD wiring, and device power.", "Перевір підключення ST-Link, SWD-дроти та живлення пристрою."),
                 ("Reading SPI flash size...", "Читання розміру SPI flash..."),
+                ("SPI flash size is missing. Reading it from device now.", "Розмір SPI flash відсутній. Читаю його з пристрою."),
                 ("SPI flash size is missing.", "Розмір SPI flash відсутній."),
                 ("SPI flash size is UNKNOWN.", "Розмір SPI flash UNKNOWN."),
                 ("SPI flash size:", "Розмір SPI flash:"),
@@ -1940,6 +1942,7 @@ exit /b 1
         return {
             "sanity": self.marker_path(f"sanity_{target}.ok").exists(),
             "spi_size_known": expected_spi_size > 0,
+            "spi_backup_exists": spi_path.exists(),
             "spi_backup": (
                 spi_path.exists()
                 and expected_spi_size > 0
@@ -1996,7 +1999,7 @@ exit /b 1
         if script_name == "1_sanity_check.cmd":
             return True
         if state["protection_unlocked"]:
-            return script_name == "5_restore.cmd" and state["spi_backup"] and state["internal_backup"]
+            return script_name == "5_restore.cmd" and state["spi_backup_exists"] and state["internal_backup"]
         if script_name in ("2_backup_flash.cmd", "3_backup_internal_flash.cmd", "4_unlock_device.cmd") and (
             not state["sanity"] or not state["spi_size_known"]
         ):
