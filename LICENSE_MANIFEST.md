@@ -11,6 +11,16 @@ Confirmed by current GWUnlock documentation:
 - [x] OpenOCD: bundled component.
 - [x] ST-Link USB driver: not bundled; user installs separately.
 
+Repository license file layout:
+
+- `licenses/python/LICENSE.txt`
+- `licenses/pyinstaller/COPYING.txt`
+- `licenses/pyinstaller/BOOTLOADER_EXCEPTION.txt`
+- `licenses/gnwmanager/LICENSE.txt`
+- `licenses/pyocd/LICENSE.txt`
+- `licenses/openocd/COPYING.txt`
+- `licenses/libusb/COPYING.txt`
+
 Needs verification from exact build/release files:
 
 - [ ] libusb license file from exact OpenOCD package.

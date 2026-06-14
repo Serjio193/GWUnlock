@@ -1,5 +1,20 @@
 # Release Notes
 
+## v1.0.8
+
+License file layout compatibility.
+
+- Add canonical license aliases under `licenses/`, including `licenses/python/LICENSE.txt` and `licenses/pyinstaller/COPYING.txt`.
+- Add common `LICENSE.txt` / `COPYING.txt` aliases for bundled Apache/GPL/LGPL components.
+- Update `LICENSE_MANIFEST.md` with the expected repository license paths.
+
+SHA256:
+
+```text
+01708EC0FC98443BFCB6DE82A88707265C8A4F9200BF208DE029E95DBD10306E  GWUnlock.exe
+ED69FB0F94B0956CDC649633E321BE5CF004A916D0683AA2FD875E9F8AE9B5D6  GWUnlock-v1.0.8-windows-x64.zip
+```
+
 ## v1.0.7
 
 License pack integration.
