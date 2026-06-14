@@ -27,11 +27,32 @@ Repository license file layout:
 - `licenses/hidapi/LICENSE-bsd.txt`
 - `licenses/libjaylink/COPYING.txt`
 - `licenses/mingw-runtime/README.txt`
+- `licenses/mingw-runtime/COPYING3.txt`
+- `licenses/mingw-runtime/COPYING3.LIB.txt`
+- `licenses/mingw-runtime/COPYING.RUNTIME.txt`
 
-Needs verification from exact build/release files:
+Detected bundled runtime binaries:
 
-- [ ] libusb license file from exact OpenOCD package.
-- [x] hidapi license files from upstream hidapi repository.
-- [x] libjaylink COPYING file from upstream libjaylink mirror.
-- [ ] libgcc / winpthread / MinGW runtime license files from the exact OpenOCD package, if present.
-- [ ] Any additional Python package licenses from `pip freeze` / PyInstaller analysis output.
+- [x] `dist/GWUnlock.exe`
+- [x] `release/GWUnlock.exe`
+- [x] `vendor/openocd/bin/openocd.exe`
+- [x] `vendor/openocd/bin/libusb-1.0.dll`
+- [x] `vendor/openocd/bin/libhidapi-0.dll`
+- [x] `vendor/openocd/bin/libjaylink-0.dll`
+- [x] `vendor/openocd/bin/libgcc_s_sjlj-1.dll`
+- [x] `vendor/openocd/bin/libwinpthread-1.dll`
+
+Runtime dependency license status:
+
+- [x] OpenOCD license notice included: `licenses/openocd/COPYING.txt`.
+- [x] libusb runtime binary detected; license notice included: `licenses/libusb/COPYING.txt`.
+- [x] hidapi runtime binary detected; license notices included: `licenses/hidapi/LICENSE.txt` and `licenses/hidapi/LICENSE-bsd.txt`.
+- [x] libjaylink runtime binary detected; license notice included: `licenses/libjaylink/COPYING.txt`.
+- [x] MinGW/GCC runtime DLLs detected: `libgcc_s_sjlj-1.dll` and `libwinpthread-1.dll`.
+- [x] MinGW/GCC runtime license notices included under `licenses/mingw-runtime/`.
+
+Needs verification before each public binary release:
+
+- [ ] Generate and review `pip-freeze.txt` or `pip-list.txt` from the exact build environment.
+- [ ] Check PyInstaller build output for any additional `.dll`, `.pyd`, `.exe`, `.whl`, or `.zip` files not listed above.
+- [ ] Confirm the release ZIP includes `GWUnlock.exe`, `THIRD_PARTY_NOTICES.md`, and the full `licenses/` directory.
